@@ -1,0 +1,19 @@
+----------------------------------------------------------------------------------------------------------------------------------
+NCDrill File Report For: F17_Kiraly_Krisztina.PcbDoc   18/03/2025  11:46:47
+----------------------------------------------------------------------------------------------------------------------------------
+
+Layer Pair : Top Layer to Bottom Layer
+ASCII RoundHoles File : KiralyKrisztina17.TXT
+
+Tool       Hole Size               Hole Tolerance               Hole Type       Hole Count   Plated         Tool Travel
+----------------------------------------------------------------------------------------------------------------------------------
+T1      28mil (0.711mm)                                           Round             52        PTH        16.17inch (410.62mm)
+T2      28mil (0.714mm)                                           Round             3         PTH        0.28inch (7.18mm)
+T3      43mil (1.1mm)                                             Round             96        PTH        15.51inch (394.07mm)
+T4      110mil (2.8mm)                                            Round             4         PTH        7.29inch (185.25mm)
+T5      118mil (2.997mm)                                          Round             3         PTH        0.49inch (12.34mm)
+T6      138mil (3.5mm)                                            Round             4         PTH        10.71inch (271.92mm)
+----------------------------------------------------------------------------------------------------------------------------------
+Totals                                                                              162
+
+Total Processing Time (hh:mm:ss) : 00:00:00

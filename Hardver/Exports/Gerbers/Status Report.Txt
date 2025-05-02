@@ -1,0 +1,12 @@
+Output: NC Drill Files
+Type  : NC Drill
+From  : PCB Document [F17_Kiraly_Krisztina.PcbDoc]
+   Generated File[KiralyKrisztina17.TXT]
+   Generated File[KiralyKrisztina17.LDP]
+   Generated File[KiralyKrisztina17.DRR]
+
+
+Files Generated   : 3
+Documents Printed : 0
+
+Finished Output Generation At 11:46:47 On 18/03/2025
