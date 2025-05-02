@@ -49,12 +49,24 @@
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 /* USER CODE BEGIN PFP */
-
+void delay_us(uint32_t us);
+void setup_micro_delay();
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+void delay_us(uint32_t us)
+{
+    uint32_t start = DWT->CYCCNT;
+    uint32_t ticks = us * (HAL_RCC_GetHCLKFreq() / 1000000);
+    while ((DWT->CYCCNT - start) < ticks);
+}
 
+void setup_micro_delay()
+{
+    CoreDebug->DEMCR |= CoreDebug_DEMCR_TRCENA_Msk;
+    DWT->CTRL |= DWT_CTRL_CYCCNTENA_Msk;
+}
 /* USER CODE END 0 */
 
 /**
@@ -87,14 +99,31 @@ int main(void)
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
   /* USER CODE BEGIN 2 */
-
+  setup_micro_delay();
+  uint32_t period_us = 10000; // 0.1 kHz PWM
+  uint32_t duty_us = 5000;    // 50%
+  int direction = 1; // -1: decrease, 1: increase
+  int num=0;
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
   {
+	  HAL_GPIO_WritePin(GPIOA, GPIO_PIN_5, GPIO_PIN_SET);
+	  delay_us(duty_us);
+	  HAL_GPIO_WritePin(GPIOA, GPIO_PIN_5, GPIO_PIN_RESET);
+	  delay_us(period_us - duty_us);
+	  num++;
 
+	  if(num==10)
+	  {
+		  if(duty_us==period_us || duty_us==0)
+		  		  direction = (direction==-1) ? +1 : -1;
+
+		  duty_us = duty_us+direction*1000;
+		  num=0;
+	  }
 
     /* USER CODE END WHILE */
 
