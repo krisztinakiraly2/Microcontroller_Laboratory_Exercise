@@ -1,0 +1,67 @@
+# STM32CubeIDE project-specific files
+.settings/
+.metadata/
+*.launch
+*.log
+*.bak
+*.swp
+
+# Build directories
+Debug/
+debug/
+Release/
+release/
+
+# Compiled object files
+*.o
+*.obj
+*.d
+*.su
+
+# Executable files and binaries
+*.elf
+*.hex
+*.bin
+*.out
+*.exe
+
+# Libraries
+*.a
+*.lib
+*.la
+*.lo
+
+# Linker output
+*.map
+*.exp
+*.ilk
+
+# Shared objects
+*.so
+*.so.*
+*.dll
+*.dylib
+
+# Precompiled headers
+*.gch
+*.pch
+
+# Debugger files
+*.pdb
+*.dSYM/
+*.idb
+
+# Temporary files
+*.tmp
+*.temp
+*.log
+*.user
+*.bak
+*.swp
+*~
+
+# Eclipse-specific files
+.project
+.cproject
+.loadpath
+.externalToolBuilders/
