@@ -29,7 +29,12 @@
 
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
-
+typedef struct
+{
+    uint8_t *pData;
+    uint16_t length;
+    uint32_t Timeout;
+} UartTaskParams_t;
 /* USER CODE END PTD */
 
 /* Private define ------------------------------------------------------------*/
@@ -46,6 +51,8 @@
 /* USER CODE BEGIN Variables */
 osThreadId_t createMyTasksInitTaskHandle;
 osThreadId_t toggleLedOnButtonPushTaskHandle;
+osThreadId_t uartCommunicationTaskHandle;
+extern UART_HandleTypeDef huart2;
 
 const osThreadAttr_t createMyTasksInitTask_attributes =
 {
@@ -57,6 +64,13 @@ const osThreadAttr_t createMyTasksInitTask_attributes =
 const osThreadAttr_t toggleLedOnButtonPushTask_attributes =
 {
   .name = "ToggleLedOnButtonPushTask",
+  .stack_size = 128 * 4,
+  .priority = (osPriority_t) osPriorityNormal,
+};
+
+const osThreadAttr_t uartCommunicationTask_attributes =
+{
+  .name = "UartCommunicationTask",
   .stack_size = 128 * 4,
   .priority = (osPriority_t) osPriorityNormal,
 };
@@ -82,13 +96,31 @@ void ToggleLedOnButtonPushTask(void *argument)
 
 void CreateMyTasksInitTask(void *argument)
 {
+	UartTaskParams_t uartParams =
+	{
+		.pData = (uint8_t *)"Hello world!",
+		.length = 12,
+		.Timeout = 2000
+	};
+
+	// Create tasks
+	toggleLedOnButtonPushTaskHandle = osThreadNew(ToggleLedOnButtonPushTask, NULL, &toggleLedOnButtonPushTask_attributes);
+	uartCommunicationTaskHandle = osThreadNew(UartCommunicationTask, &uartParams, &toggleLedOnButtonPushTask_attributes);
+
+	// Delete self
+	vTaskDelete(createMyTasksInitTaskHandle);
+
+	while(1);
+}
+
+void UartCommunicationTask(void *argument)
+{
+	UartTaskParams_t *params;
 	while(1)
 	{
-		// Create tasks
-		toggleLedOnButtonPushTaskHandle = osThreadNew(ToggleLedOnButtonPushTask, NULL, &toggleLedOnButtonPushTask_attributes);
-
-		// Delete self
-		vTaskDelete(createMyTasksInitTaskHandle);
+		params = (UartTaskParams_t *)argument;
+		HAL_UART_Transmit(&huart2, params->pData, params->length, params->Timeout);
+		osDelay(100);
 	}
 }
 /* USER CODE END Application */
