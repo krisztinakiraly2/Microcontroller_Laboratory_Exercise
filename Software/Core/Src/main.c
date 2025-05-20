@@ -22,8 +22,7 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-#include "FreeRTOS.h"
-#include "task.h"
+#include "mytasks.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -45,12 +44,12 @@
 UART_HandleTypeDef huart2;
 
 /* Definitions for defaultTask */
-/*osThreadId_t defaultTaskHandle;
+osThreadId_t defaultTaskHandle;
 const osThreadAttr_t defaultTask_attributes = {
-  .name = "defaultTask",
+  .name = "DefaultTask",
   .stack_size = 128 * 4,
   .priority = (osPriority_t) osPriorityNormal,
-};*/
+};
 /* USER CODE BEGIN PV */
 
 /* USER CODE END PV */
@@ -59,7 +58,7 @@ const osThreadAttr_t defaultTask_attributes = {
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_USART2_UART_Init(void);
-//void StartDefaultTask(void *argument);
+void StartDefaultTask(void *argument);
 
 /* USER CODE BEGIN PFP */
 
@@ -67,17 +66,7 @@ static void MX_USART2_UART_Init(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-void ButtonTask(void *argument)
-{
-	int buttonState;
-    for(;;)
-    {
-        buttonState = !HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_8);
-        HAL_GPIO_WritePin(GPIOA, GPIO_PIN_5, buttonState ? GPIO_PIN_SET : GPIO_PIN_RESET);
-        //osDelay(10); // poll every 10 ms
-    }
 
-}
 /* USER CODE END 0 */
 
 /**
@@ -115,7 +104,7 @@ int main(void)
   /* USER CODE END 2 */
 
   /* Init scheduler */
-  //osKernelInitialize();
+  osKernelInitialize();
 
   /* USER CODE BEGIN RTOS_MUTEX */
   /* add mutexes, ... */
@@ -135,7 +124,7 @@ int main(void)
 
   /* Create the thread(s) */
   /* creation of defaultTask */
-  //defaultTaskHandle = osThreadNew(StartDefaultTask, NULL, &defaultTask_attributes);
+  defaultTaskHandle = osThreadNew(StartDefaultTask, NULL, &defaultTask_attributes);
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
@@ -143,12 +132,11 @@ int main(void)
 
   /* USER CODE BEGIN RTOS_EVENTS */
   /* add events, ... */
-  xTaskCreate(ButtonTask, "Button1", 128, NULL, 1, NULL);
-  vTaskStartScheduler();
+  createMyTasksInitTaskHandle = osThreadNew(CreateMyTasksInitTask, NULL, &createMyTasksInitTask_attributes);
   /* USER CODE END RTOS_EVENTS */
 
   /* Start scheduler */
-  //osKernelStart();
+  osKernelStart();
 
   /* We should never get here as control is now taken by the scheduler */
 
@@ -297,16 +285,16 @@ static void MX_GPIO_Init(void)
   * @retval None
   */
 /* USER CODE END Header_StartDefaultTask */
-//void StartDefaultTask(void *argument)
-//{
+void StartDefaultTask(void *argument)
+{
   /* USER CODE BEGIN 5 */
   /* Infinite loop */
-  /*for(;;)
+  for(;;)
   {
     osDelay(1);
-  }*/
+  }
   /* USER CODE END 5 */
-//}
+}
 
 /**
   * @brief  Period elapsed callback in non blocking mode
