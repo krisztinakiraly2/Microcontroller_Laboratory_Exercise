@@ -14,13 +14,23 @@
 extern osThreadId_t createMyTasksInitTaskHandle;
 extern osThreadId_t toggleLedOnButtonPushTaskHandle;
 extern osThreadId_t uartCommunicationTaskHandle;
+extern osThreadId_t gameLogicTaskHandle;
+extern osThreadId_t lcdUpdateTaskHandle;
+extern osThreadId_t BacklightControlTaskHandle;
 
 extern const osThreadAttr_t createMyTasksInitTask_attributes;
 extern const osThreadAttr_t toggleLedOnButtonPushTask_attributes;
 extern const osThreadAttr_t uartCommunicationTask_attributes;
 
+extern const osThreadAttr_t gameLogicTask_attributes;
+extern const osThreadAttr_t lcdUpdateTask_attributes;
+extern const osThreadAttr_t backlightControlTask_attributes;
+
 void ToggleLedOnButtonPushTask(void *argument);
 void CreateMyTasksInitTask(void *argument);
 void UartCommunicationTask(void *argument);
+void GameLogicTask(void *argument);
+void LcdUpdateTask(void *argument);
+void BacklightControlTask(void *argument);
 
 #endif /* INC_MYTASKS_H_ */

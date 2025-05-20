@@ -18,13 +18,14 @@
 /* USER CODE END Header */
 
 /* Includes ------------------------------------------------------------------*/
-#include <mytasks.h>
+#include "FreeRTOS.h"
 #include "task.h"
 #include "main.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include "main.h"
+#include "mytasks.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -52,6 +53,10 @@ typedef struct
 osThreadId_t createMyTasksInitTaskHandle;
 osThreadId_t toggleLedOnButtonPushTaskHandle;
 osThreadId_t uartCommunicationTaskHandle;
+osThreadId_t gameLogicTaskHandle;
+osThreadId_t lcdUpdateTaskHandle;
+osThreadId_t BacklightControlTaskHandle;
+
 extern UART_HandleTypeDef huart2;
 
 const osThreadAttr_t createMyTasksInitTask_attributes =
@@ -71,6 +76,27 @@ const osThreadAttr_t toggleLedOnButtonPushTask_attributes =
 const osThreadAttr_t uartCommunicationTask_attributes =
 {
   .name = "UartCommunicationTask",
+  .stack_size = 128 * 4,
+  .priority = (osPriority_t) osPriorityNormal,
+};
+
+const osThreadAttr_t gameLogicTask_attributes =
+{
+  .name = "GameLogicTask",
+  .stack_size = 128 * 4,
+  .priority = (osPriority_t) osPriorityNormal,
+};
+
+const osThreadAttr_t lcdUpdateTask_attributes =
+{
+  .name = "LcdUpdateTask",
+  .stack_size = 128 * 4,
+  .priority = (osPriority_t) osPriorityNormal,
+};
+
+const osThreadAttr_t backlightControlTask_attributes =
+{
+  .name = "BacklightControlTask",
   .stack_size = 128 * 4,
   .priority = (osPriority_t) osPriorityNormal,
 };
@@ -104,7 +130,7 @@ void CreateMyTasksInitTask(void *argument)
 	};
 
 	// Create tasks
-	toggleLedOnButtonPushTaskHandle = osThreadNew(ToggleLedOnButtonPushTask, NULL, &toggleLedOnButtonPushTask_attributes);
+	//toggleLedOnButtonPushTaskHandle = osThreadNew(ToggleLedOnButtonPushTask, NULL, &toggleLedOnButtonPushTask_attributes);
 	uartCommunicationTaskHandle = osThreadNew(UartCommunicationTask, &uartParams, &toggleLedOnButtonPushTask_attributes);
 
 	// Delete self
