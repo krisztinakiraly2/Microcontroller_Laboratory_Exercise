@@ -57,12 +57,34 @@ void Error_Handler(void);
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/
+#define GLCD_DB1_Pin GPIO_PIN_0
+#define GLCD_DB1_GPIO_Port GPIOA
+#define GLCD_DB3_Pin GPIO_PIN_1
+#define GLCD_DB3_GPIO_Port GPIOA
 #define USART_TX_Pin GPIO_PIN_2
 #define USART_TX_GPIO_Port GPIOA
 #define USART_RX_Pin GPIO_PIN_3
 #define USART_RX_GPIO_Port GPIOA
-#define LD2_Pin GPIO_PIN_5
-#define LD2_GPIO_Port GPIOA
+#define GLCD_DB5_Pin GPIO_PIN_4
+#define GLCD_DB5_GPIO_Port GPIOA
+#define GLCD_CS1_Pin GPIO_PIN_5
+#define GLCD_CS1_GPIO_Port GPIOA
+#define GLCD_CS2_Pin GPIO_PIN_6
+#define GLCD_CS2_GPIO_Port GPIOA
+#define GLCD_RESET_Pin GPIO_PIN_7
+#define GLCD_RESET_GPIO_Port GPIOA
+#define GLCD_DB7_Pin GPIO_PIN_0
+#define GLCD_DB7_GPIO_Port GPIOB
+#define GLCDEN_Pin GPIO_PIN_1
+#define GLCDEN_GPIO_Port GPIOB
+#define GLCD_DI_Pin GPIO_PIN_2
+#define GLCD_DI_GPIO_Port GPIOB
+#define GLCD_DB2_Pin GPIO_PIN_13
+#define GLCD_DB2_GPIO_Port GPIOB
+#define GLCD_DB6_Pin GPIO_PIN_14
+#define GLCD_DB6_GPIO_Port GPIOB
+#define GLCD_DB4_Pin GPIO_PIN_15
+#define GLCD_DB4_GPIO_Port GPIOB
 #define Place_Pin GPIO_PIN_8
 #define Place_GPIO_Port GPIOA
 #define Place_EXTI_IRQn EXTI9_5_IRQn
@@ -72,10 +94,10 @@ void Error_Handler(void);
 #define LightMinus_Pin GPIO_PIN_10
 #define LightMinus_GPIO_Port GPIOA
 #define LightMinus_EXTI_IRQn EXTI15_10_IRQn
-#define TMS_Pin GPIO_PIN_13
-#define TMS_GPIO_Port GPIOA
-#define TCK_Pin GPIO_PIN_14
-#define TCK_GPIO_Port GPIOA
+#define GLCD_E_Pin GPIO_PIN_11
+#define GLCD_E_GPIO_Port GPIOA
+#define GLCD_DB0_Pin GPIO_PIN_12
+#define GLCD_DB0_GPIO_Port GPIOA
 #define SWO_Pin GPIO_PIN_3
 #define SWO_GPIO_Port GPIOB
 #define Reset_Pin GPIO_PIN_5

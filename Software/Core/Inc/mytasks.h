@@ -10,12 +10,14 @@
 #pragma once
 
 #include "cmsis_os.h"
+#include "lcd.h"
+#include <LCD1602.h>
 
 extern osThreadId_t createMyTasksInitTaskHandle;
 extern osThreadId_t uartCommunicationTaskHandle;
 extern osThreadId_t gameLogicTaskHandle;
 extern osThreadId_t lcdUpdateTaskHandle;
-extern osThreadId_t BacklightControlTaskHandle;
+extern osThreadId_t backlightControlTaskHandle;
 extern osThreadId_t resetTaskHandle;
 
 extern const osThreadAttr_t createMyTasksInitTask_attributes;

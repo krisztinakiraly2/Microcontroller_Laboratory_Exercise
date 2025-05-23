@@ -25,7 +25,6 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "mytasks.h"
-#include "semphr.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -50,6 +49,8 @@ typedef struct
 
 /* Private variables ---------------------------------------------------------*/
 /* USER CODE BEGIN Variables */
+bool init = true;
+
 osThreadId_t createMyTasksInitTaskHandle;
 osThreadId_t uartCommunicationTaskHandle;
 osThreadId_t gameLogicTaskHandle;
@@ -121,6 +122,7 @@ void CreateMyTasksInitTask(void *argument)
 
 	// Create tasks
 	uartCommunicationTaskHandle = osThreadNew(UartCommunicationTask, &uartParams, &uartCommunicationTask_attributes);
+	backlightControlTaskHandle = osThreadNew(BacklightControlTask, NULL, &backlightControlTask_attributes);
 	resetTaskHandle = osThreadNew(ResetTask, NULL, &resetTask_attributes);
 
 	// Delete self
@@ -137,6 +139,36 @@ void UartCommunicationTask(void *argument)
 		HAL_UART_Transmit(&huart2, params->pData, params->length, params->Timeout); // Send the message
 		osDelay(1000); // Delay so it isn't spaming the data
 	}
+}
+
+void GLCD_Init(void)
+{
+    // Reset the display
+    HAL_GPIO_WritePin(GLCD_RESET_GPIO_Port, GLCD_RESET_Pin, GPIO_PIN_RESET);
+    HAL_Delay(10);
+    HAL_GPIO_WritePin(GLCD_RESET_GPIO_Port, GLCD_RESET_Pin, GPIO_PIN_SET);
+    HAL_Delay(10);
+
+    // Enable both chips
+    //HAL_GPIO_WritePin(GLCD_CS1_GPIO_Port, GLCD_CS1_Pin, GPIO_PIN_SET);
+    //HAL_GPIO_WritePin(GLCD_CS2_GPIO_Port, GLCD_CS2_Pin, GPIO_PIN_RESET);
+    //WriteToDisplay(0x3F,COMMAND);
+
+    //HAL_GPIO_WritePin(GLCD_CS1_GPIO_Port, GLCD_CS1_Pin, GPIO_PIN_RESET);
+	//HAL_GPIO_WritePin(GLCD_CS2_GPIO_Port, GLCD_CS2_Pin, GPIO_PIN_SET);
+	//WriteToDisplay(0x3F,COMMAND);
+}
+
+void BacklightControlTask(void *argument)
+{
+	if(init)
+	{
+		init = false;
+		//GLCD_Init();
+	}
+
+	//WriteToDisplay(0x41,DATA);
+	osDelay(1000);
 }
 
 void ResetTask(void *argument)
