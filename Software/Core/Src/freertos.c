@@ -54,7 +54,7 @@ bool init = true;
 osThreadId_t createMyTasksInitTaskHandle;
 osThreadId_t uartCommunicationTaskHandle;
 osThreadId_t gameLogicTaskHandle;
-osThreadId_t lcdUpdateTaskHandle;
+osThreadId_t glcdUpdateTaskHandle;
 osThreadId_t backlightControlTaskHandle;
 osThreadId_t resetTaskHandle;
 
@@ -81,7 +81,7 @@ const osThreadAttr_t gameLogicTask_attributes =
   .priority = (osPriority_t) osPriorityNormal,
 };
 
-const osThreadAttr_t lcdUpdateTask_attributes =
+const osThreadAttr_t glcdUpdateTask_attributes =
 {
   .name = "LcdUpdateTask",
   .stack_size = 128 * 4,
@@ -120,9 +120,12 @@ void CreateMyTasksInitTask(void *argument)
 		.Timeout = 2000
 	};
 
+	// Initialize the lcd
+	GlcdInit();
+
 	// Create tasks
 	uartCommunicationTaskHandle = osThreadNew(UartCommunicationTask, &uartParams, &uartCommunicationTask_attributes);
-	backlightControlTaskHandle = osThreadNew(BacklightControlTask, NULL, &backlightControlTask_attributes);
+	glcdUpdateTaskHandle = osThreadNew(GlcdUpdateTask, NULL, &glcdUpdateTask_attributes);
 	resetTaskHandle = osThreadNew(ResetTask, NULL, &resetTask_attributes);
 
 	// Delete self
@@ -141,34 +144,19 @@ void UartCommunicationTask(void *argument)
 	}
 }
 
-void GLCD_Init(void)
+void GlcdUpdateTask(void *argument)
 {
-    // Reset the display
-    HAL_GPIO_WritePin(GLCD_RESET_GPIO_Port, GLCD_RESET_Pin, GPIO_PIN_RESET);
-    HAL_Delay(10);
-    HAL_GPIO_WritePin(GLCD_RESET_GPIO_Port, GLCD_RESET_Pin, GPIO_PIN_SET);
-    HAL_Delay(10);
-
-    // Enable both chips
-    //HAL_GPIO_WritePin(GLCD_CS1_GPIO_Port, GLCD_CS1_Pin, GPIO_PIN_SET);
-    //HAL_GPIO_WritePin(GLCD_CS2_GPIO_Port, GLCD_CS2_Pin, GPIO_PIN_RESET);
-    //WriteToDisplay(0x3F,COMMAND);
-
-    //HAL_GPIO_WritePin(GLCD_CS1_GPIO_Port, GLCD_CS1_Pin, GPIO_PIN_RESET);
-	//HAL_GPIO_WritePin(GLCD_CS2_GPIO_Port, GLCD_CS2_Pin, GPIO_PIN_SET);
-	//WriteToDisplay(0x3F,COMMAND);
-}
-
-void BacklightControlTask(void *argument)
-{
-	if(init)
+	// write the letter R to page 1
+	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_5, GPIO_PIN_RESET); // CS1
+	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_6, GPIO_PIN_SET); // CS2
+	GlcdWriteData(GLCD_X_ADDR_ZERO, GLCD_DI_COMMAND_MODE);
+	uint8_t rLetter[] = {0x00, 0x7F, 0x09, 0x19, 0x29, 0x46, 0x00};
+	for (uint8_t i = 0; i < sizeof(rLetter); ++i)
 	{
-		init = false;
-		//GLCD_Init();
+		GlcdWriteData(rLetter[i],GLCD_DI_DATA_MODE);
 	}
 
-	//WriteToDisplay(0x41,DATA);
-	osDelay(1000);
+	osDelay(100);
 }
 
 void ResetTask(void *argument)

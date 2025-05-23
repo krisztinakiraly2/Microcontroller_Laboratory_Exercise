@@ -23,9 +23,6 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "mytasks.h"
-#include "ST7920_SERIAL.h"
-#include "delay.h"
-#include "lcd2.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -139,34 +136,10 @@ int main(void)
   /* USER CODE BEGIN RTOS_EVENTS */
   /* add events, ... */
   createMyTasksInitTaskHandle = osThreadNew(CreateMyTasksInitTask, NULL, &createMyTasksInitTask_attributes);
-
-  /*delay_init();
-  ST7920_Init();
-  ST7920_SendString(0, 0, "Meow");
-  ST7920_SendString(1, 0, "Meow");
-  ST7920_SendString(2, 0, "Meow");
-  ST7920_SendString(3, 0, "Meow");*/
-
-  //glcd_init();
-
-  /*for (uint8_t page = 0; page < 8; page++) {
-      for (uint8_t chip = 0; chip < 2; chip++) {
-          ks_write_cmd(0xB8 | page, chip);  // Page address
-          ks_write_cmd(0x40, chip);         // X = 0
-          for (uint8_t i = 0; i < 64; i++) {
-              ks_write_data(0xFF, chip);    // Fill line
-          }
-      }
-  }*/
-
-  //glcd_test_data_bus();
-
-  HAL_GPIO_WritePin(GPIOC, GPIO_PIN_8, GPIO_PIN_SET); // random pin for testing
-
   /* USER CODE END RTOS_EVENTS */
 
   /* Start scheduler */
-  //osKernelStart();
+  osKernelStart();
 
   /* We should never get here as control is now taken by the scheduler */
 
@@ -177,47 +150,6 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-		HAL_GPIO_WritePin(GPIOB, GPIO_PIN_1, GPIO_PIN_RESET); // vmi másik en
-		HAL_GPIO_WritePin(GPIOA, GPIO_PIN_7, GPIO_PIN_RESET); // rst
-		osDelay(255);
-		HAL_GPIO_WritePin(GPIOA, GPIO_PIN_7, GPIO_PIN_SET);
-
-		HAL_GPIO_WritePin(GPIOA, GPIO_PIN_5, GPIO_PIN_RESET);  // CS1
-		HAL_GPIO_WritePin(GPIOA, GPIO_PIN_6, GPIO_PIN_RESET);  // CS2
-		HAL_GPIO_WritePin(GPIOB, GPIO_PIN_2, GPIO_PIN_RESET); //rs
-
-		glcd_write_data_bus(0x3F);
-		pulse_enable();
-		osDelay(255);
-
-	  	// sety
-	    HAL_GPIO_WritePin(GPIOB, GPIO_PIN_2, GPIO_PIN_RESET); //rs
-	    glcd_write_data_bus(0x40);
-		pulse_enable();
-
-	    //setx
-		HAL_GPIO_WritePin(GPIOB, GPIO_PIN_2, GPIO_PIN_RESET); //rs
-		glcd_write_data_bus(0xB8);
-		pulse_enable();
-
-		// setz (for ram memory)
-		HAL_GPIO_WritePin(GPIOB, GPIO_PIN_2, GPIO_PIN_RESET); //rs
-		glcd_write_data_bus(0xC0);
-		pulse_enable();
-		osDelay(255);
-
-		// send data to 0,0
-		HAL_GPIO_WritePin(GPIOA, GPIO_PIN_5, GPIO_PIN_SET);  // CS1
-		HAL_GPIO_WritePin(GPIOA, GPIO_PIN_6, GPIO_PIN_RESET);  // CS2
-		HAL_GPIO_WritePin(GPIOB, GPIO_PIN_2, GPIO_PIN_SET); //rs
-
-		//uint8_t r_letter[] = {0x00, 0x7F, 0x09, 0x19, 0x29, 0x46};
-		uint8_t r_letter[] = {0x7F};
-		for (uint8_t i = 0; i < sizeof(r_letter); ++i)
-		{
-			glcd_write_data_bus(r_letter[i]);
-			pulse_enable();
-		}
   }
   /* USER CODE END 3 */
 }
@@ -365,7 +297,8 @@ static void MX_GPIO_Init(void)
 
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(GPIOA, GLCD_DB1_Pin|GLCD_DB3_Pin|GLCD_DB5_Pin|GLCD_CS1_Pin
-                          |GLCD_CS2_Pin|GLCD_RESET_Pin|GLCD_E_Pin|GLCD_DB0_Pin, GPIO_PIN_RESET);
+                          |GLCD_CS2_Pin|GLCD_RESET_Pin|GLCD_E_Pin|GLCD_DB0_Pin
+                          |GLCD_RW_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(GPIOB, GLCD_DB7_Pin|GLCDEN_Pin|GLCD_DI_Pin|GLCD_DB2_Pin
@@ -375,9 +308,11 @@ static void MX_GPIO_Init(void)
   HAL_GPIO_WritePin(GPIOC, GPIO_PIN_8, GPIO_PIN_RESET);
 
   /*Configure GPIO pins : GLCD_DB1_Pin GLCD_DB3_Pin GLCD_DB5_Pin GLCD_CS1_Pin
-                           GLCD_CS2_Pin GLCD_RESET_Pin GLCD_E_Pin GLCD_DB0_Pin */
+                           GLCD_CS2_Pin GLCD_RESET_Pin GLCD_E_Pin GLCD_DB0_Pin
+                           GLCD_RW_Pin */
   GPIO_InitStruct.Pin = GLCD_DB1_Pin|GLCD_DB3_Pin|GLCD_DB5_Pin|GLCD_CS1_Pin
-                          |GLCD_CS2_Pin|GLCD_RESET_Pin|GLCD_E_Pin|GLCD_DB0_Pin;
+                          |GLCD_CS2_Pin|GLCD_RESET_Pin|GLCD_E_Pin|GLCD_DB0_Pin
+                          |GLCD_RW_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
