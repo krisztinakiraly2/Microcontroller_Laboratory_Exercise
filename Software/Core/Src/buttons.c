@@ -5,7 +5,7 @@
 uint32_t lastPlusTime = 0;
 uint32_t lastMinusTime = 0;
 uint32_t lastResetTime = 0;
-uint32_t debounceDelay = 50; // milliseconds
+uint32_t debounceDelay = 300; // milliseconds
 
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 {
@@ -14,7 +14,14 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 
 	switch(GPIO_Pin)
 	{
-		case Place_Pin: break;
+		case Place_Pin:
+			if ((now - lastPlusTime) > debounceDelay)
+			{
+				vTaskNotifyGiveFromISR(glcdUpdateTaskHandle, &xHigherPriorityTaskWoken);
+				lastPlusTime = now;
+				portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
+			}
+			break;
 		case LightPlus_Pin:
 			if ((now - lastPlusTime) > debounceDelay)
 			{

@@ -19,6 +19,7 @@
 #define PWM_CHANNEL TIM_CHANNEL_1
 
 extern volatile uint16_t glcdBacklightLevel;
+extern volatile uint16_t score;
 extern TIM_HandleTypeDef PWM_TIMER;
 extern UART_HandleTypeDef huart2;
 

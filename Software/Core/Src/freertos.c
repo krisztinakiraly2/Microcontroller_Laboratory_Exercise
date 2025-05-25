@@ -50,6 +50,7 @@ typedef struct
 /* Private variables ---------------------------------------------------------*/
 /* USER CODE BEGIN Variables */
 volatile uint16_t glcdBacklightLevel = GLCD_BACKLIGHT_START;
+volatile uint16_t score = 0;
 
 osThreadId_t createMyTasksInitTaskHandle;
 osThreadId_t uartCommunicationTaskHandle;
@@ -139,6 +140,7 @@ void CreateMyTasksInitTask(void *argument)
 
 	// Create tasks
 	uartCommunicationTaskHandle = osThreadNew(UartCommunicationTask, &uartParams, &uartCommunicationTask_attributes);
+	gameLogicTaskHandle = osThreadNew(GameLogicTask, NULL, &gameLogicTask_attributes);
 	glcdUpdateTaskHandle = osThreadNew(GlcdUpdateTask, NULL, &glcdUpdateTask_attributes);
 	glcdBacklightControlTaskHandle = osThreadNew(GlcdBacklightControlTask, NULL, &glcdBacklightControlTask_attributes);
 	glcdBacklightPlusTaskHandle = osThreadNew(GlcdBacklightPlusTask, NULL, &glcdBacklightPlusTask_attributes);
@@ -161,20 +163,59 @@ void UartCommunicationTask(void *argument)
 	}
 }
 
+void GameLogicTask(void *argument)
+{
+	while(1)
+	{
+		/*ulTaskNotifyTake(pdTRUE, portMAX_DELAY); // Wait for notification (blocks until given)
+		vTaskDelay(pdMS_TO_TICKS(20));
+
+		GlcdClearBlockColumns();
+		GlcdDrawNewFilledBlock(position);
+
+		taskENTER_CRITICAL();
+		glcdCurrentLevel++;
+		position = GLCD_BLOCK_RIGHT_MARGIN;
+		taskEXIT_CRITICAL();
+
+		GlcdPrintFromImageBuffer();*/
+		osDelay(10000);
+	}
+}
+
 void GlcdUpdateTask(void *argument)
 {
 	GlcdDrawStartBG();
 	GlcdPrintFromImageBuffer();
 
-	//glcdImageBuffer = fullyFilledBuffer;
-	//glcdImageBuffer = emptyBuffer;
-
-	uint8_t position = GLCD_BLOCK_RIGHT_MARGIN;
 	int8_t direction = -1; // Start moving "up" (to 0)
+	uint8_t position = GLCD_BLOCK_RIGHT_MARGIN;
+	bool moveBlocksEnabled = false;
 
 	while (1)
 	{
-	    GlcdClearBlockColumns();
+		// Check for notification (non-blocking)
+		if (ulTaskNotifyTake(pdTRUE, 0))
+		{
+			if (!moveBlocksEnabled && glcdCurrentLevel >= 3)
+				moveBlocksEnabled = true;
+
+			GlcdClearBlockColumns();
+			GlcdDrawNewFilledBlock(position);
+
+			if (moveBlocksEnabled)
+			{
+				GlcdMoveAllBlockDown(1);
+				// Do not increment glcdCurrentLevel, so moving block stays at the same spot
+			}
+			else
+			{
+				glcdCurrentLevel++; // Regular increment for first 3 rounds
+			}
+		}
+
+		// Do animation as usual
+		GlcdClearBlockColumns();
 	    GlcdDrawNewBlock(position);
 	    GlcdPrintFromImageBuffer();
 
@@ -193,13 +234,7 @@ void GlcdUpdateTask(void *argument)
 	        else
 	            direction = -1; // Hit bottom, reverse
 	    }
-	}
 
-
-	while(1)
-	{
-
-		osDelay(100);
 	}
 }
 
