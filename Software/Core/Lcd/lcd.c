@@ -1,16 +1,24 @@
-#include "main.h"
 #include "lcd.h"
-#include "cmsis_os.h"
 
-uint8_t glcdImageBuffer[(128 * 64)/8];
+//uint8_t glcdImageBuffer[(128 * 64)/8];
+uint8_t* glcdImageBuffer;
+uint16_t glcdCurrentLevel = 1;
+
+// os_delay is too slow for refreshing the display
+void Delay_us(uint32_t us)
+{
+    uint32_t start = DWT->CYCCNT;
+    uint32_t ticks = us * (HAL_RCC_GetHCLKFreq() / 1000000);
+    while ((DWT->CYCCNT - start) < ticks);
+}
 
 // The enable's falling edge triggers the reading of the command or data in the lcd
 void PulseEnable()
 {
 	HAL_GPIO_WritePin(GLCD_E_GPIO_Port, GLCD_E_Pin, GPIO_PIN_SET); // 1 active
-	osDelay(1);
+	Delay_us(1);
 	HAL_GPIO_WritePin(GLCD_E_GPIO_Port, GLCD_E_Pin, GPIO_PIN_RESET);
-	osDelay(1);
+	Delay_us(1);
 }
 
 // write the data to the pins based on the bits in data and triggers write to lcd
@@ -67,3 +75,183 @@ void GlcdClearMemory()
 		GlcdWriteData(GLCD_X_ADDR_ZERO+i, GLCD_DI_COMMAND_MODE);
 	}
 }
+
+#define DELAY_US 25
+
+void GlcdPrintFromImageBuffer(void)
+{
+    for (uint8_t half = 0; half < 2; ++half)
+    {
+        // Set the correct chip select lines
+        if (half == 0)
+        {
+            // Left half (CS1 ON, CS2 OFF)
+            HAL_GPIO_WritePin(GPIOA, GPIO_PIN_5, GPIO_PIN_RESET); // CS1 ON
+            HAL_GPIO_WritePin(GPIOA, GPIO_PIN_6, GPIO_PIN_SET);   // CS2 OFF
+        }
+        else
+        {
+            // Right half (CS1 OFF, CS2 ON)
+            HAL_GPIO_WritePin(GPIOA, GPIO_PIN_5, GPIO_PIN_SET);   // CS1 OFF
+            HAL_GPIO_WritePin(GPIOA, GPIO_PIN_6, GPIO_PIN_RESET); // CS2 ON
+        }
+
+        uint8_t col_start = half * (GLCD_COLS / 2);
+        uint8_t col_end = col_start + (GLCD_COLS / 2);
+
+        for (uint8_t row = 0; row < GLCD_ROWS / 8; ++row) // Each page is 8 rows
+        {
+            // Set row (page) address
+            GlcdWriteData(GLCD_X_ADDR_ZERO + row, GLCD_DI_COMMAND_MODE);
+
+            for (uint8_t col = col_start; col < col_end; ++col)
+            {
+                uint16_t idx = row * GLCD_COLS + col;
+                GlcdWriteData(glcdImageBuffer[idx], GLCD_DI_DATA_MODE);
+                Delay_us(DELAY_US); // Remove or move as needed!
+            }
+        }
+    }
+}
+
+
+void GlcdDrawStartBG()
+{
+	glcdImageBuffer = startBG;
+}
+
+// Set pixel in GLCD buffer
+static inline void GlcdSetPixel(uint8_t *buf, uint8_t x, uint8_t y, uint8_t color)
+{
+    if (x >= GLCD_COLS || y >= GLCD_ROWS) return;
+    uint16_t idx = (y / 8) * GLCD_COLS + x;
+    uint8_t bit = 1 << (y % 8);
+    if (color)
+    	buf[idx] &= ~bit;
+    else
+    	buf[idx] |= bit;
+}
+
+// Clear buffer and draw one horizontal block centered from the top margin
+void GlcdDrawNewBlock(uint8_t position)
+{
+    // Clamp position to screen boundaries so block doesn't fall off
+    if (position > GLCD_ROWS - GLCD_BLOCK_WIDTH)
+        position = GLCD_ROWS - GLCD_BLOCK_WIDTH;
+
+    // Calculate block's horizontal (X) position (right-aligned, with a gap)
+    uint16_t gapFromRight = glcdCurrentLevel * GLCD_BLOCK_HEIGHT-1;
+    uint8_t blockRightX = (gapFromRight >= GLCD_COLS) ? 0 : (GLCD_COLS - gapFromRight - 1);
+    uint8_t blockLeftX = (blockRightX >= (GLCD_BLOCK_HEIGHT - 1)) ? (blockRightX - (GLCD_BLOCK_HEIGHT - 1)) : 0;
+
+    // Vertical (Y): position from function argument
+    uint8_t blockTopY = position;
+    uint8_t blockBottomY = blockTopY + GLCD_BLOCK_WIDTH - 1;
+    if (blockBottomY >= GLCD_ROWS) blockBottomY = GLCD_ROWS - 1;
+
+    // --- Draw block outline (not filled) ---
+    for (uint8_t x = blockLeftX; x <= blockRightX; x++) {
+        GlcdSetPixel(glcdImageBuffer, x, blockTopY, 1);        // Top edge
+        GlcdSetPixel(glcdImageBuffer, x, blockBottomY, 1);     // Bottom edge
+    }
+    for (uint8_t y = blockTopY; y <= blockBottomY; y++) {
+        GlcdSetPixel(glcdImageBuffer, blockLeftX, y, 1);       // Left edge
+        GlcdSetPixel(glcdImageBuffer, blockRightX, y, 1);      // Right edge
+    }
+
+    // First window: top margin from block top
+    uint8_t win1_topY    = blockTopY + GLCD_LEFT_WINDOW_MARGIN_FROM_BORDER;
+    uint8_t win1_bottomY = win1_topY + GLCD_WINDOW_WIDTH - 1;
+
+    // Second window: below first, with spacing
+    uint8_t win2_topY    = win1_bottomY + 1 + GLCD_SPACING_BETWEEN_WINDOWS;
+    uint8_t win2_bottomY = win2_topY + GLCD_WINDOW_WIDTH - 1;
+
+    // Windows always drawn, but clipped if outside block
+    if (win1_bottomY > blockBottomY) win1_bottomY = blockBottomY;
+    if (win2_bottomY > blockBottomY) win2_bottomY = blockBottomY;
+
+    // Window X (horizontal): centered in block
+    uint8_t win_leftX  = blockLeftX + (GLCD_BLOCK_HEIGHT - GLCD_WINDOW_HEIGHT) / 2;
+    uint8_t win_rightX = win_leftX + GLCD_WINDOW_HEIGHT - 1;
+    if (win_rightX > blockRightX) win_rightX = blockRightX;
+
+    // Draw Window 1 Outline
+    for (uint8_t x = win_leftX; x <= win_rightX; x++) {
+        GlcdSetPixel(glcdImageBuffer, x, win1_topY, 1);        // Top edge
+        GlcdSetPixel(glcdImageBuffer, x, win1_bottomY, 1);     // Bottom edge
+    }
+    for (uint8_t y = win1_topY; y <= win1_bottomY; y++) {
+        GlcdSetPixel(glcdImageBuffer, win_leftX, y, 1);        // Left edge
+        GlcdSetPixel(glcdImageBuffer, win_rightX, y, 1);       // Right edge
+    }
+
+    // Draw Window 2 Outline
+    for (uint8_t x = win_leftX; x <= win_rightX; x++) {
+        GlcdSetPixel(glcdImageBuffer, x, win2_topY, 1);        // Top edge
+        GlcdSetPixel(glcdImageBuffer, x, win2_bottomY, 1);     // Bottom edge
+    }
+    for (uint8_t y = win2_topY; y <= win2_bottomY; y++) {
+        GlcdSetPixel(glcdImageBuffer, win_leftX, y, 1);        // Left edge
+        GlcdSetPixel(glcdImageBuffer, win_rightX, y, 1);       // Right edge
+    }
+
+    // --- Draw lines inside each window (vertical and horizontal) ---
+
+    // Window 1 vertical line (centered)
+    uint8_t win1_vert_x = win_leftX + GLCD_WINDOW_HEIGHT / 2 - 1;
+    uint8_t win1_vert_ytop = win1_topY + (GLCD_WINDOW_WIDTH - GLCD_WINDOW_VERTICAL_LINE_HEIGHT) / 2;
+    uint8_t win1_vert_ybot = win1_vert_ytop + GLCD_WINDOW_VERTICAL_LINE_HEIGHT - 1;
+    if (win1_vert_ytop < win1_topY) win1_vert_ytop = win1_topY;
+    if (win1_vert_ybot > win1_bottomY) win1_vert_ybot = win1_bottomY;
+    for (uint8_t y = win1_vert_ytop; y <= win1_vert_ybot; y++) {
+        GlcdSetPixel(glcdImageBuffer, win1_vert_x, y, 1);
+    }
+    // Window 1 horizontal line (centered)
+    uint8_t win1_horz_y = win1_topY + GLCD_WINDOW_WIDTH / 2;
+    uint8_t win1_horz_xleft = win_leftX + (GLCD_WINDOW_HEIGHT - GLCD_WINDOW_HORIZONTAL_LINE_WIDTH) / 2;
+    uint8_t win1_horz_xright = win1_horz_xleft + GLCD_WINDOW_HORIZONTAL_LINE_WIDTH - 1;
+    if (win1_horz_xleft < win_leftX) win1_horz_xleft = win_leftX;
+    if (win1_horz_xright > win_rightX) win1_horz_xright = win_rightX;
+    for (uint8_t x = win1_horz_xleft; x <= win1_horz_xright; x++) {
+        GlcdSetPixel(glcdImageBuffer, x, win1_horz_y, 1);
+    }
+
+    // Window 2 vertical line (centered)
+    uint8_t win2_vert_x = win_leftX + GLCD_WINDOW_HEIGHT / 2 - 1;
+    uint8_t win2_vert_ytop = win2_topY + (GLCD_WINDOW_WIDTH - GLCD_WINDOW_VERTICAL_LINE_HEIGHT) / 2;
+    uint8_t win2_vert_ybot = win2_vert_ytop + GLCD_WINDOW_VERTICAL_LINE_HEIGHT - 1;
+    if (win2_vert_ytop < win2_topY) win2_vert_ytop = win2_topY;
+    if (win2_vert_ybot > win2_bottomY) win2_vert_ybot = win2_bottomY;
+    for (uint8_t y = win2_vert_ytop; y <= win2_vert_ybot; y++) {
+        GlcdSetPixel(glcdImageBuffer, win2_vert_x, y, 1);
+    }
+    // Window 2 horizontal line (centered)
+    uint8_t win2_horz_y = win2_topY + GLCD_WINDOW_WIDTH / 2;
+    uint8_t win2_horz_xleft = win_leftX + (GLCD_WINDOW_HEIGHT - GLCD_WINDOW_HORIZONTAL_LINE_WIDTH) / 2;
+    uint8_t win2_horz_xright = win2_horz_xleft + GLCD_WINDOW_HORIZONTAL_LINE_WIDTH - 1;
+    if (win2_horz_xleft < win_leftX) win2_horz_xleft = win_leftX;
+    if (win2_horz_xright > win_rightX) win2_horz_xright = win_rightX;
+    for (uint8_t x = win2_horz_xleft; x <= win2_horz_xright; x++) {
+        GlcdSetPixel(glcdImageBuffer, x, win2_horz_y, 1);
+    }
+}
+
+void GlcdClearBlockColumns()
+{
+    uint16_t gapFromRight = glcdCurrentLevel * GLCD_BLOCK_HEIGHT - 1;
+    uint8_t blockRightX = (gapFromRight >= GLCD_COLS) ? 0 : (GLCD_COLS - gapFromRight - 1);
+    uint8_t blockLeftX = (blockRightX >= (GLCD_BLOCK_HEIGHT - 1)) ? (blockRightX - (GLCD_BLOCK_HEIGHT - 1)) : 0;
+
+    // For each column the block covers
+    for (uint8_t x = blockLeftX; x <= blockRightX; x++)
+    {
+        // For each page (8 rows), set the byte for this column to 0
+        for (uint8_t page = 0; page < (GLCD_ROWS / 8); page++)
+        {
+            uint16_t idx = page * GLCD_COLS + x;
+            glcdImageBuffer[idx] = GLCD_EMPTY_BYTE;
+        }
+    }
+}
+

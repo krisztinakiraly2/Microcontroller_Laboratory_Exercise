@@ -49,16 +49,16 @@ typedef struct
 
 /* Private variables ---------------------------------------------------------*/
 /* USER CODE BEGIN Variables */
-bool init = true;
+volatile uint16_t glcdBacklightLevel = GLCD_BACKLIGHT_START;
 
 osThreadId_t createMyTasksInitTaskHandle;
 osThreadId_t uartCommunicationTaskHandle;
 osThreadId_t gameLogicTaskHandle;
 osThreadId_t glcdUpdateTaskHandle;
-osThreadId_t backlightControlTaskHandle;
+osThreadId_t glcdBacklightControlTaskHandle;
+osThreadId_t glcdBacklightPlusTaskHandle;
+osThreadId_t glcdBacklightMinusTaskHandle;
 osThreadId_t resetTaskHandle;
-
-extern UART_HandleTypeDef huart2;
 
 const osThreadAttr_t createMyTasksInitTask_attributes =
 {
@@ -88,7 +88,21 @@ const osThreadAttr_t glcdUpdateTask_attributes =
   .priority = (osPriority_t) osPriorityNormal,
 };
 
-const osThreadAttr_t backlightControlTask_attributes =
+const osThreadAttr_t glcdBacklightControlTask_attributes =
+{
+  .name = "BacklightControlTask",
+  .stack_size = 128 * 4,
+  .priority = (osPriority_t) osPriorityNormal,
+};
+
+const osThreadAttr_t glcdBacklightPlusTask_attributes =
+{
+  .name = "BacklightControlTask",
+  .stack_size = 128 * 4,
+  .priority = (osPriority_t) osPriorityNormal,
+};
+
+const osThreadAttr_t glcdBacklightMinusTask_attributes =
 {
   .name = "BacklightControlTask",
   .stack_size = 128 * 4,
@@ -126,6 +140,9 @@ void CreateMyTasksInitTask(void *argument)
 	// Create tasks
 	uartCommunicationTaskHandle = osThreadNew(UartCommunicationTask, &uartParams, &uartCommunicationTask_attributes);
 	glcdUpdateTaskHandle = osThreadNew(GlcdUpdateTask, NULL, &glcdUpdateTask_attributes);
+	glcdBacklightControlTaskHandle = osThreadNew(GlcdBacklightControlTask, NULL, &glcdBacklightControlTask_attributes);
+	glcdBacklightPlusTaskHandle = osThreadNew(GlcdBacklightPlusTask, NULL, &glcdBacklightPlusTask_attributes);
+	glcdBacklightMinusTaskHandle = osThreadNew(GlcdBacklightMinusTask, NULL, &glcdBacklightMinusTask_attributes);
 	resetTaskHandle = osThreadNew(ResetTask, NULL, &resetTask_attributes);
 
 	// Delete self
@@ -146,17 +163,95 @@ void UartCommunicationTask(void *argument)
 
 void GlcdUpdateTask(void *argument)
 {
-	// write the letter R to page 1
-	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_5, GPIO_PIN_RESET); // CS1
-	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_6, GPIO_PIN_SET); // CS2
-	GlcdWriteData(GLCD_X_ADDR_ZERO, GLCD_DI_COMMAND_MODE);
-	uint8_t rLetter[] = {0x00, 0x7F, 0x09, 0x19, 0x29, 0x46, 0x00};
-	for (uint8_t i = 0; i < sizeof(rLetter); ++i)
+	GlcdDrawStartBG();
+	GlcdPrintFromImageBuffer();
+
+	//glcdImageBuffer = fullyFilledBuffer;
+	//glcdImageBuffer = emptyBuffer;
+
+	uint8_t position = GLCD_BLOCK_RIGHT_MARGIN;
+	int8_t direction = -1; // Start moving "up" (to 0)
+
+	while (1)
 	{
-		GlcdWriteData(rLetter[i],GLCD_DI_DATA_MODE);
+	    GlcdClearBlockColumns();
+	    GlcdDrawNewBlock(position);
+	    GlcdPrintFromImageBuffer();
+
+	    // Bounce logic
+	    if (direction < 0) // Going "up" (to 0)
+	    {
+	        if (position > 0)
+	            position--;
+	        else
+	            direction = 1; // Hit top, reverse
+	    }
+	    else // Going "down" (to 64 - GLCD_BLOCK_WIDTH)
+	    {
+	        if (position < (64 - GLCD_BLOCK_WIDTH))
+	            position++;
+	        else
+	            direction = -1; // Hit bottom, reverse
+	    }
 	}
 
-	osDelay(100);
+
+	while(1)
+	{
+
+		osDelay(100);
+	}
+}
+
+void GlcdBacklightControlTask (void *argument)
+{
+	uint8_t prevLevel = 0xFF; // Force first update
+	while(1)
+	{
+		if (glcdBacklightLevel != prevLevel)
+		{
+			// Update PWM compare (duty cycle)
+			__HAL_TIM_SET_COMPARE(&PWM_TIMER, PWM_CHANNEL, glcdBacklightLevel); // 100-1000 for 10%-100%
+			prevLevel = glcdBacklightLevel;
+		}
+		osDelay(10); // Polling period (adjust as needed)
+	}
+}
+
+void GlcdBacklightPlusTask (void *argument)
+{
+	while(1)
+	{
+		ulTaskNotifyTake(pdTRUE, portMAX_DELAY); // Wait for notification (blocks until given)
+		vTaskDelay(pdMS_TO_TICKS(20)); // crude debounce
+		// Do the light+
+		if (glcdBacklightLevel+GLCD_BACKLIGHT_STEP < GLCD_BACKLIGHT_MAX)
+		{
+			glcdBacklightLevel += GLCD_BACKLIGHT_STEP;
+		}
+		else
+		{
+			glcdBacklightLevel = GLCD_BACKLIGHT_MAX;
+		}
+	}
+}
+
+void GlcdBacklightMinusTask (void *argument)
+{
+	while(1)
+	{
+		ulTaskNotifyTake(pdTRUE, portMAX_DELAY); // Wait for notification (blocks until given)
+		vTaskDelay(pdMS_TO_TICKS(20)); // crude debounce
+		// Do the light-
+		if (glcdBacklightLevel-GLCD_BACKLIGHT_STEP > GLCD_BACKLIGHT_MIN)
+		{
+			glcdBacklightLevel -= GLCD_BACKLIGHT_STEP;
+		}
+		else
+		{
+			glcdBacklightLevel = GLCD_BACKLIGHT_MIN;
+		}
+	}
 }
 
 void ResetTask(void *argument)
