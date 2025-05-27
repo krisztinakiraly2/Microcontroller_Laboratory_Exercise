@@ -1,4 +1,5 @@
-#include "lcd.h"
+#include "glcd.h"
+#include <stdio.h>
 
 void GlcdDrawPixel(uint8_t *buf, uint8_t y, uint8_t x, uint8_t color)
 {
@@ -11,9 +12,19 @@ void GlcdDrawPixel(uint8_t *buf, uint8_t y, uint8_t x, uint8_t color)
     	buf[idx] |= bit;
 }
 
-void GlcdDrawStartBG()
+void GlcdDrawStartBG(uint8_t pos, uint8_t width)
 {
-	glcdImageBuffer = startBG;
+	glcdCurrentLevel = 0;
+	glcdImageBuffer = Buffer;
+
+	// clear blocks for after reset
+	for(int i=1; i<4; ++i)
+	{
+		ClearBlocksFromLevel(i);
+	}
+
+	GlcdDrawScoreText(glcdImageBuffer, 0, 24);
+	GlcdDrawNewFilledBlock(pos,width);
 	glcdCurrentLevel++;
 }
 
@@ -43,90 +54,87 @@ void GlcdDrawBox(uint8_t *buf, uint8_t left, uint8_t top, uint8_t right, uint8_t
     GlcdDrawLine(buf, right, top,    right, bottom, color); // Right edge
 }
 
-
-void GlcdDrawWindow(
-    uint8_t *buf,
-    uint8_t left, uint8_t top, uint8_t right, uint8_t bottom,
-    uint8_t win_width, uint8_t win_height,
-    uint8_t vert_line_height, uint8_t horz_line_width,
-    uint8_t color)
+void GlcdDrawNewBlock(uint8_t position, uint8_t width)
 {
-    // Draw window outline
-    GlcdDrawBox(buf, left, top, right, bottom, color);
-
-    // Vertical line (centered)
-    uint8_t vert_x = left + win_height / 2 - 1;
-    uint8_t vert_ytop = top + (win_width - vert_line_height) / 2;
-    uint8_t vert_ybot = vert_ytop + vert_line_height - 1;
-    if (vert_ytop < top) vert_ytop = top;
-    if (vert_ybot > bottom) vert_ybot = bottom;
-    GlcdDrawLine(buf, vert_x, vert_ytop, vert_x, vert_ybot, color);
-
-    // Horizontal line (centered)
-    uint8_t horz_y = top + win_width / 2;
-    uint8_t horz_xleft = left + (win_height - horz_line_width) / 2;
-    uint8_t horz_xright = horz_xleft + horz_line_width - 1;
-    if (horz_xleft < left) horz_xleft = left;
-    if (horz_xright > right) horz_xright = right;
-    GlcdDrawLine(buf, horz_xleft, horz_y, horz_xright, horz_y, color);
-}
-
-void GlcdDrawTwoWindows(
-    uint8_t *buf,
-    uint8_t block_leftX, uint8_t block_topY, uint8_t block_rightX, uint8_t block_bottomY,
-    uint8_t win_margin, uint8_t win_spacing,
-    uint8_t win_height, uint8_t win_width,
-    uint8_t vert_line_height, uint8_t horz_line_width,
-    uint8_t color)
-{
-    // Window X (horizontal): centered in block
-    uint8_t win_leftX  = block_leftX + (GLCD_BLOCK_HEIGHT - win_height) / 2;
-    uint8_t win_rightX = win_leftX + win_height - 1;
-    if (win_rightX > block_rightX) win_rightX = block_rightX;
-
-    // First window
-    uint8_t win1_topY    = block_topY + win_margin;
-    uint8_t win1_bottomY = win1_topY + win_width - 1;
-    if (win1_bottomY > block_bottomY) win1_bottomY = block_bottomY;
-
-    GlcdDrawWindow(buf, win_leftX, win1_topY, win_rightX, win1_bottomY, win_width, win_height, vert_line_height, horz_line_width, color);
-
-    // Second window
-    uint8_t win2_topY    = win1_bottomY + 1 + win_spacing;
-    uint8_t win2_bottomY = win2_topY + win_width - 1;
-    if (win2_bottomY > block_bottomY) win2_bottomY = block_bottomY;
-
-    GlcdDrawWindow(buf, win_leftX, win2_topY, win_rightX, win2_bottomY, win_width, win_height, vert_line_height, horz_line_width, color);
-}
-
-void GlcdDrawNewBlock(uint8_t position)
-{
-    // Clamp position to screen boundaries so block doesn't fall off
-    if (position > GLCD_ROWS - GLCD_BLOCK_WIDTH)
-        position = GLCD_ROWS - GLCD_BLOCK_WIDTH;
+    // Clamp position to screen boundaries so block doesn't fall off vertically (Y-axis)
+    if (position > GLCD_ROWS - width)
+        position = GLCD_ROWS - width;
 
     // Calculate block's horizontal (X) position (right-aligned, with a gap)
-    uint16_t gapFromRight = glcdCurrentLevel * GLCD_BLOCK_HEIGHT - 1;
+    uint16_t gapFromRight = glcdCurrentLevel * BLOCK_HEIGHT - 1;
     uint8_t blockRightX = (gapFromRight >= GLCD_COLS) ? 0 : (GLCD_COLS - gapFromRight - 1);
-    uint8_t blockLeftX = (blockRightX >= (GLCD_BLOCK_HEIGHT - 1)) ? (blockRightX - (GLCD_BLOCK_HEIGHT - 1)) : 0;
+    uint8_t blockLeftX = (blockRightX >= (BLOCK_HEIGHT - 1)) ? (blockRightX - (BLOCK_HEIGHT - 1)) : 0;
 
-    // Vertical (Y): position from function argument
+    // Vertical (Y): position from function argument, with variable width
     uint8_t blockTopY = position;
-    uint8_t blockBottomY = blockTopY + GLCD_BLOCK_WIDTH - 1;
+    uint8_t blockBottomY = blockTopY + width - 1;
     if (blockBottomY >= GLCD_ROWS) blockBottomY = GLCD_ROWS - 1;
-
-    // Clear buffer if needed here (not shown in your original code)
 
     // Draw block outline (not filled)
     GlcdDrawBox(glcdImageBuffer, blockLeftX, blockTopY, blockRightX, blockBottomY, 1);
-
-    // Draw two windows inside the block
-    GlcdDrawTwoWindows(
-        glcdImageBuffer,
-        blockLeftX, blockTopY, blockRightX, blockBottomY,
-        GLCD_LEFT_WINDOW_MARGIN_FROM_BORDER, GLCD_SPACING_BETWEEN_WINDOWS,
-        GLCD_WINDOW_HEIGHT, GLCD_WINDOW_WIDTH,
-        GLCD_WINDOW_VERTICAL_LINE_HEIGHT, GLCD_WINDOW_HORIZONTAL_LINE_WIDTH,
-        1
-    );
 }
+
+// posX: starting column (0..127), posY: starting row (0..63)
+void GlcdDrawDigit(uint8_t *buffer, uint8_t digit, uint8_t posX, uint8_t posY, uint8_t color)
+{
+	if (digit > 10) return; // Only digits 0..9, or 10 for 'x'
+	for (uint8_t col = 0; col < 10; ++col) // 10 columns, left to right
+	{
+		uint8_t colBits = numFont[digit][col];
+		for (uint8_t row = 0; row < 8; ++row) // 8 rows, top to bottom
+		{
+			uint8_t notColor = (color==1) ? 0 : 1;
+			GlcdDrawPixel(buffer, posX + col, posY + row, (colBits & (1 << row)) ? notColor : color);
+		}
+	}
+}
+
+void GlcdDrawNumber(uint8_t *buffer, uint16_t number, uint8_t posX, uint8_t posY, uint8_t color)
+{
+    // Out of bounds: show 'XXX'
+    if (number > 999)
+    {
+        GlcdDrawDigit(buffer, 10, posX, posY, color);        // X (left)
+        GlcdDrawDigit(buffer, 10, posX, posY+7, color);   // X (center)
+        GlcdDrawDigit(buffer, 10, posX, posY+2*7, color);   // X (right)
+        return;
+    }
+
+    // Split into digits, most significant first (hundreds, tens, ones)
+    uint8_t digits[3];
+    digits[0] = number / 100;         // Hundreds
+    digits[1] = (number / 10) % 10;   // Tens
+    digits[2] = number % 10;          // Ones
+
+    for (uint8_t i = 0; i < 3; ++i)
+    {
+        GlcdDrawDigit(buffer, digits[i], posX, posY + (2-i)*7, color);
+    }
+}
+
+void GlcdDrawScoreText(uint8_t *buffer, uint8_t posX, uint8_t posY)
+{
+	uint8_t height = 9;
+    for (uint8_t col = 0; col < 10; ++col) // 10 columns, right to left
+    {
+        for (uint8_t block = 0; block < 5; ++block) // 5 blocks of 8 pixels (40 total)
+        {
+            uint8_t bits = scoreTxt[col * 5 + block];
+            for (uint8_t row = 0; row < 8; ++row)
+            {
+                uint8_t color = (bits & (1 << row)) ? 1 : 0;
+                // X: horizontal, Y: vertical. Highest X = posX, then decrease left.
+                GlcdDrawPixel(buffer, posX - col + height, posY + block * 8 + row, color);
+            }
+        }
+    }
+
+}
+
+void GlcdDrawGameOver(uint16_t score)
+{
+	glcdImageBuffer = gameOverBG;
+	GlcdDrawNumber(glcdImageBuffer, score, 64, 0, 1);
+	GlcdPrintFromImageBuffer(GLCD_DEFAULT_REFRESH_SPEED);
+}
+

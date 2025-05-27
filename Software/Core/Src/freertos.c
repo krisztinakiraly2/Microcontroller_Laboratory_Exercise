@@ -175,7 +175,7 @@ void GameLogicTask(void *argument)
 
 		taskENTER_CRITICAL();
 		glcdCurrentLevel++;
-		position = GLCD_BLOCK_RIGHT_MARGIN;
+		position = BLOCK_RIGHT_MARGIN;
 		taskEXIT_CRITICAL();
 
 		GlcdPrintFromImageBuffer();*/
@@ -185,12 +185,21 @@ void GameLogicTask(void *argument)
 
 void GlcdUpdateTask(void *argument)
 {
-	GlcdDrawStartBG();
-	GlcdPrintFromImageBuffer();
-
 	int8_t direction = -1; // Start moving "up" (to 0)
-	uint8_t position = GLCD_BLOCK_RIGHT_MARGIN;
+	uint8_t position = BLOCK_RIGHT_MARGIN;
+	uint16_t gameSpeed = GLCD_DEFAULT_REFRESH_SPEED;
+	const int gameSpeedMin = 5;
 	bool moveBlocksEnabled = false;
+	int currentWidth = BLOCK_WIDTH;
+	//bool isGameOver = false;
+
+	BlockRect currentBlock;
+	BlockRect prevBlock;
+	prevBlock.rightX = BLOCK_RIGHT_MARGIN;
+	prevBlock.leftX = BLOCK_RIGHT_MARGIN + BLOCK_WIDTH - 1;
+
+	GlcdDrawStartBG(position,currentWidth);
+	GlcdPrintFromImageBuffer(GLCD_DEFAULT_REFRESH_SPEED);
 
 	while (1)
 	{
@@ -200,12 +209,50 @@ void GlcdUpdateTask(void *argument)
 			if (!moveBlocksEnabled && glcdCurrentLevel >= 3)
 				moveBlocksEnabled = true;
 
-			GlcdClearBlockColumns();
-			GlcdDrawNewFilledBlock(position);
+			if (!AlignAndTrimBlock(&prevBlock, &currentBlock))
+			{
+				// No overlap = game over
+				GlcdDrawGameOver(score);
+
+				if(ulTaskNotifyTake(pdTRUE, portMAX_DELAY))
+				{
+					score = 0;
+					direction = -1; // Start moving "up" (to 0)
+					position = BLOCK_RIGHT_MARGIN;
+					gameSpeed = GLCD_DEFAULT_REFRESH_SPEED;
+					moveBlocksEnabled = false;
+					currentWidth = BLOCK_WIDTH;
+
+					prevBlock.rightX = BLOCK_RIGHT_MARGIN;
+					prevBlock.leftX = BLOCK_RIGHT_MARGIN + BLOCK_WIDTH - 1;
+
+					GlcdDrawStartBG(position,currentWidth);
+					GlcdPrintFromImageBuffer(GLCD_DEFAULT_REFRESH_SPEED);
+					continue;
+				}
+			}
+			else
+			{
+				// Block survived, update for next round
+				prevBlock = currentBlock;
+				currentWidth = currentBlock.leftX - currentBlock.rightX + 1;
+				position=currentBlock.rightX;
+				score++;
+				if ((score % 5 == 0) && (gameSpeed > gameSpeedMin))
+				{
+				    gameSpeed -= 4;
+				    if (gameSpeed < gameSpeedMin)
+				        gameSpeed = gameSpeedMin;
+				}
+
+			}
+
+			ClearBlocksFromLevel(glcdCurrentLevel);
+			GlcdDrawNewFilledBlock(currentBlock.rightX,currentWidth);
 
 			if (moveBlocksEnabled)
 			{
-				GlcdMoveAllBlockDown(1);
+				MoveAllBlockDown(1);
 				// Do not increment glcdCurrentLevel, so moving block stays at the same spot
 			}
 			else
@@ -215,9 +262,13 @@ void GlcdUpdateTask(void *argument)
 		}
 
 		// Do animation as usual
-		GlcdClearBlockColumns();
-	    GlcdDrawNewBlock(position);
-	    GlcdPrintFromImageBuffer();
+		ClearBlocksFromLevel(glcdCurrentLevel);
+	    GlcdDrawNewBlock(position,currentWidth);
+	    UpdateScoreDisplay(score);
+	    GlcdPrintFromImageBuffer(gameSpeed);
+
+	    currentBlock.rightX = position;
+	    currentBlock.leftX = position + currentWidth - 1;
 
 	    // Bounce logic
 	    if (direction < 0) // Going "up" (to 0)
@@ -227,9 +278,9 @@ void GlcdUpdateTask(void *argument)
 	        else
 	            direction = 1; // Hit top, reverse
 	    }
-	    else // Going "down" (to 64 - GLCD_BLOCK_WIDTH)
+	    else // Going "down" (to 64 - BLOCK_WIDTH)
 	    {
-	        if (position < (64 - GLCD_BLOCK_WIDTH))
+	    	if (position < (64 - currentWidth))
 	            position++;
 	        else
 	            direction = -1; // Hit bottom, reverse

@@ -17,6 +17,7 @@
 #include "glcd_draw_functions.h"
 #include "glcd_fill_functions.h"
 #include "mytasks.h"
+#include "game_logic.h"
 
 extern uint8_t* glcdImageBuffer;
 extern uint16_t glcdCurrentLevel;
@@ -25,8 +26,6 @@ void PulseEnable();
 void GlcdWriteData(uint8_t data, GPIO_PinState);
 void GlcdInit();
 void GlcdClearMemory();
-void GlcdPrintFromImageBuffer();
-void GlcdClearBlockColumns();
-void GlcdMoveAllBlockDown(uint8_t levels);
+void GlcdPrintFromImageBuffer(uint8_t);
 
 #endif /* LCD_LCD2_H_ */

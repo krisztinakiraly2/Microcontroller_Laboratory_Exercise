@@ -1,4 +1,4 @@
-#include "lcd.h"
+#include "glcd.h"
 
 //uint8_t glcdImageBuffer[(128 * 64)/8];
 uint8_t* glcdImageBuffer;
@@ -76,7 +76,7 @@ void GlcdClearMemory()
 	}
 }
 
-void GlcdPrintFromImageBuffer(void)
+void GlcdPrintFromImageBuffer(uint8_t speed)
 {
     for (uint8_t half = 0; half < 2; ++half)
     {
@@ -106,71 +106,8 @@ void GlcdPrintFromImageBuffer(void)
             {
                 uint16_t idx = row * GLCD_COLS + col;
                 GlcdWriteData(glcdImageBuffer[idx], GLCD_DI_DATA_MODE);
-                Delay_us(25);
+                Delay_us(speed);
             }
         }
     }
-}
-
-//TODO: flip vertical naming to horizontal and vice verse
-void GlcdClearBlockColumns()
-{
-    uint16_t gapFromRight = glcdCurrentLevel * GLCD_BLOCK_HEIGHT - 1;
-    uint8_t blockRightX = (gapFromRight >= GLCD_COLS) ? 0 : (GLCD_COLS - gapFromRight - 1);
-    uint8_t blockLeftX = (blockRightX >= (GLCD_BLOCK_HEIGHT - 1)) ? (blockRightX - (GLCD_BLOCK_HEIGHT - 1)) : 0;
-
-    // For each column the block covers
-    for (uint8_t x = blockLeftX; x <= blockRightX; x++)
-    {
-        // For each page (8 rows), set the byte for this column to 0
-        for (uint8_t page = 0; page < (GLCD_ROWS / 8); page++)
-        {
-            uint16_t idx = page * GLCD_COLS + x;
-            glcdImageBuffer[idx] = GLCD_EMPTY_BYTE;
-        }
-    }
-}
-
-// to have enough space for the new block move the blocks down
-void GlcdMoveAllBlockDown(uint8_t levels)
-{
-	 if (levels == 0)
-	        return;
-
-	uint8_t cols_to_shift = levels * GLCD_BLOCK_HEIGHT;
-	if (cols_to_shift >= (GAME_AREA_END_COL - GAME_AREA_START_COL))
-	{
-		// If shifting more than fits, just clear the area
-		for (int row = 0; row < (GLCD_ROWS / 8); ++row)
-		{
-			for (int col = GAME_AREA_START_COL; col < GAME_AREA_END_COL; ++col)
-			{
-				glcdImageBuffer[row * GLCD_COLS + col] = GLCD_EMPTY_BYTE;
-			}
-		}
-	}
-	else
-	{
-		// Shift each "game" column's data right
-		for (int row = 0; row < (GLCD_ROWS / 8); ++row)
-		{
-			for (int col = GAME_AREA_END_COL - 1; col >= GAME_AREA_START_COL; --col)
-			{
-				int src_col = col - cols_to_shift;
-				uint8_t val = 0x00;
-				if (src_col >= GAME_AREA_START_COL)
-				{
-					val = glcdImageBuffer[row * GLCD_COLS + src_col];
-				}
-
-				glcdImageBuffer[row * GLCD_COLS + col] = val;
-			}
-
-			// Clear the leftmost new columns that just opened up
-			for (int col = GAME_AREA_START_COL; col < GAME_AREA_START_COL + cols_to_shift; ++col)
-			{
-				glcdImageBuffer[row * GLCD_COLS + col] = GLCD_EMPTY_BYTE;
-			}
-		}
-	}
 }

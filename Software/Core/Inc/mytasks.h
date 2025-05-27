@@ -9,7 +9,7 @@
 #define INC_MYTASKS_H_
 
 #include "cmsis_os.h"
-#include "lcd.h"
+#include "glcd.h"
 
 #define GLCD_BACKLIGHT_MIN 100
 #define GLCD_BACKLIGHT_MAX 1000
