@@ -7,7 +7,7 @@
       "RelativeMoniker": "D:0:0:{72340CF1-2826-40A0-B7E9-D56AB9726323}|SlicerGame.csproj|solutionrelative:form1.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{72340CF1-2826-40A0-B7E9-D56AB9726323}|SlicerGame.csproj|d:\\dokumentumok\\rendezett\\egyetem\\8_2025_tavasz\\mikrokontroller labor\\windows app\\form1.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}|Form",
+      "AbsoluteMoniker": "D:0:0:{72340CF1-2826-40A0-B7E9-D56AB9726323}|SlicerGame.csproj|D:\\Dokumentumok\\Rendezett\\Egyetem\\8_2025_tavasz\\Mikrokontroller labor\\Windows app\\form1.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}|Form",
       "RelativeMoniker": "D:0:0:{72340CF1-2826-40A0-B7E9-D56AB9726323}|SlicerGame.csproj|solutionrelative:form1.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}|Form"
     }
   ],
@@ -28,7 +28,7 @@
               "RelativeDocumentMoniker": "Form1.cs",
               "ToolTip": "D:\\Dokumentumok\\Rendezett\\Egyetem\\8_2025_tavasz\\Mikrokontroller labor\\Windows app\\Form1.cs",
               "RelativeToolTip": "Form1.cs",
-              "ViewState": "AgIAAI4AAAAAAAAAAAAkwKAAAAAIAAAAAAAAAA==",
+              "ViewState": "AgIAAI0AAAAAAAAAAAAAAKIAAAAsAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2025-05-28T02:27:12.318Z",
               "EditorCaption": ""
@@ -39,11 +39,10 @@
               "Title": "Form1.cs [Design]",
               "DocumentMoniker": "D:\\Dokumentumok\\Rendezett\\Egyetem\\8_2025_tavasz\\Mikrokontroller labor\\Windows app\\Form1.cs",
               "RelativeDocumentMoniker": "Form1.cs",
-              "ToolTip": "D:\\Dokumentumok\\Rendezett\\Egyetem\\8_2025_tavasz\\Mikrokontroller labor\\Windows app\\Form1.cs [Design]",
-              "RelativeToolTip": "Form1.cs [Design]",
+              "ToolTip": "D:\\Dokumentumok\\Rendezett\\Egyetem\\8_2025_tavasz\\Mikrokontroller labor\\Windows app\\Form1.cs [Design]*",
+              "RelativeToolTip": "Form1.cs [Design]*",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-05-28T02:26:45.19Z",
-              "EditorCaption": " [Design]"
+              "WhenOpened": "2025-05-28T02:26:45.19Z"
             }
           ]
         }
