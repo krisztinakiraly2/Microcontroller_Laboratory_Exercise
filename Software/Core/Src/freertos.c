@@ -51,10 +51,10 @@ typedef struct
 /* USER CODE BEGIN Variables */
 volatile uint16_t glcdBacklightLevel = GLCD_BACKLIGHT_START;
 volatile uint16_t score = 0;
+osMessageQueueId_t uartQueueHandle;
 
 osThreadId_t createMyTasksInitTaskHandle;
 osThreadId_t uartCommunicationTaskHandle;
-osThreadId_t gameLogicTaskHandle;
 osThreadId_t glcdUpdateTaskHandle;
 osThreadId_t glcdBacklightControlTaskHandle;
 osThreadId_t glcdBacklightPlusTaskHandle;
@@ -71,13 +71,6 @@ const osThreadAttr_t createMyTasksInitTask_attributes =
 const osThreadAttr_t uartCommunicationTask_attributes =
 {
   .name = "UartCommunicationTask",
-  .stack_size = 128 * 4,
-  .priority = (osPriority_t) osPriorityNormal,
-};
-
-const osThreadAttr_t gameLogicTask_attributes =
-{
-  .name = "GameLogicTask",
   .stack_size = 128 * 4,
   .priority = (osPriority_t) osPriorityNormal,
 };
@@ -127,20 +120,14 @@ const osThreadAttr_t resetTask_attributes =
 /* USER CODE BEGIN Application */
 void CreateMyTasksInitTask(void *argument)
 {
-	// Create paramaters
-	UartTaskParams_t uartParams =
-	{
-		.pData = (uint8_t *)"Hello world!",
-		.length = 12,
-		.Timeout = 2000
-	};
-
 	// Initialize the lcd
 	GlcdInit();
 
+	// create the queue for the uart task
+	uartQueueHandle = osMessageQueueNew(UART_QUEUE_LENGTH, sizeof(UartTaskParams_t), NULL);
+
 	// Create tasks
-	uartCommunicationTaskHandle = osThreadNew(UartCommunicationTask, &uartParams, &uartCommunicationTask_attributes);
-	gameLogicTaskHandle = osThreadNew(GameLogicTask, NULL, &gameLogicTask_attributes);
+	uartCommunicationTaskHandle = osThreadNew(UartCommunicationTask, NULL, &uartCommunicationTask_attributes);
 	glcdUpdateTaskHandle = osThreadNew(GlcdUpdateTask, NULL, &glcdUpdateTask_attributes);
 	glcdBacklightControlTaskHandle = osThreadNew(GlcdBacklightControlTask, NULL, &glcdBacklightControlTask_attributes);
 	glcdBacklightPlusTaskHandle = osThreadNew(GlcdBacklightPlusTask, NULL, &glcdBacklightPlusTask_attributes);
@@ -154,32 +141,13 @@ void CreateMyTasksInitTask(void *argument)
 
 void UartCommunicationTask(void *argument)
 {
-	UartTaskParams_t *params;
-	while(1)
+	UartTaskParams_t params;
+	while (1)
 	{
-		params = (UartTaskParams_t *)argument; // Get the params
-		HAL_UART_Transmit(&huart2, params->pData, params->length, params->Timeout); // Send the message
-		osDelay(1000); // Delay so it isn't spaming the data
-	}
-}
-
-void GameLogicTask(void *argument)
-{
-	while(1)
-	{
-		/*ulTaskNotifyTake(pdTRUE, portMAX_DELAY); // Wait for notification (blocks until given)
-		vTaskDelay(pdMS_TO_TICKS(20));
-
-		GlcdClearBlockColumns();
-		GlcdDrawNewFilledBlock(position);
-
-		taskENTER_CRITICAL();
-		glcdCurrentLevel++;
-		position = BLOCK_RIGHT_MARGIN;
-		taskEXIT_CRITICAL();
-
-		GlcdPrintFromImageBuffer();*/
-		osDelay(10000);
+		if (osMessageQueueGet(uartQueueHandle, &params, NULL, osWaitForever) == osOK)
+		{
+			HAL_UART_Transmit(&huart2, params.pData, params.length, params.Timeout);
+		}
 	}
 }
 
@@ -191,7 +159,10 @@ void GlcdUpdateTask(void *argument)
 	const int gameSpeedMin = 5;
 	bool moveBlocksEnabled = false;
 	int currentWidth = BLOCK_WIDTH;
-	//bool isGameOver = false;
+
+	static char scoreMsgStatic[8];
+	UartTaskParams_t uartMsg;
+	uartMsg.Timeout = 100;
 
 	BlockRect currentBlock;
 	BlockRect prevBlock;
@@ -213,6 +184,16 @@ void GlcdUpdateTask(void *argument)
 			{
 				// No overlap = game over
 				GlcdDrawGameOver(score);
+
+				// Prepare the score as a string (e.g., "34\r\n")
+				snprintf(scoreMsgStatic, sizeof(scoreMsgStatic), "%d\r\n", score);
+
+				// Prepare the struct
+				uartMsg.pData = (uint8_t*)scoreMsgStatic;
+				uartMsg.length = strlen(scoreMsgStatic);
+
+				// Send to UART queue (wait max 10ms if queue is full)
+				osMessageQueuePut(uartQueueHandle, &uartMsg, 0, 10);
 
 				if(ulTaskNotifyTake(pdTRUE, portMAX_DELAY))
 				{
