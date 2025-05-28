@@ -10,8 +10,8 @@
 
 #include "glcd.h"
 
-#define GAME_AREA_START_COL 10
-#define GAME_AREA_END_COL GLCD_COLS
+#define GAME_AREA_START_ROW 10
+#define GAME_AREA_END_ROW GLCD_ROWS
 
 #define BLOCK_HEIGHT 20
 #define BLOCK_WIDTH 38

@@ -65,9 +65,9 @@ void GlcdClearMemory()
 	HAL_GPIO_WritePin(GLCD_CS1_GPIO_Port, GLCD_CS1_Pin, GPIO_PIN_RESET);  // enable CS1 (0 active)
 	HAL_GPIO_WritePin(GLCD_CS2_GPIO_Port, GLCD_CS2_Pin, GPIO_PIN_RESET);  // enable CS2 (0 active)
 
-	for (int i=0; i<= GLCD_ROWS/8; ++i)
+	for (int i=0; i<= GLCD_COLS/8; ++i)
 	{
-		for (uint8_t j = 0; j < GLCD_COLS/2; ++j)
+		for (uint8_t j = 0; j < GLCD_ROWS/2; ++j)
 		{
 			GlcdWriteData(GLCD_EMPTY_BYTE, GLCD_DI_DATA_MODE);
 		}
@@ -94,20 +94,21 @@ void GlcdPrintFromImageBuffer(uint8_t speed)
             HAL_GPIO_WritePin(GPIOA, GPIO_PIN_6, GPIO_PIN_RESET); // CS2 ON
         }
 
-        uint8_t col_start = half * (GLCD_COLS / 2);
-        uint8_t col_end = col_start + (GLCD_COLS / 2);
+        uint8_t row_start = half * (GLCD_ROWS / 2);
+        uint8_t row_end = row_start + (GLCD_ROWS / 2);
 
-        for (uint8_t row = 0; row < GLCD_ROWS / 8; ++row) // Each page is 8 rows
+        for (uint8_t col = 0; col < GLCD_COLS / 8; ++col)
         {
-            // Set row (page) address
-            GlcdWriteData(GLCD_X_ADDR_ZERO + row, GLCD_DI_COMMAND_MODE);
+            // Set column address
+            GlcdWriteData(GLCD_X_ADDR_ZERO + col, GLCD_DI_COMMAND_MODE);
 
-            for (uint8_t col = col_start; col < col_end; ++col)
+            for (uint8_t row = row_start; row < row_end; ++row)
             {
-                uint16_t idx = row * GLCD_COLS + col;
+                uint16_t idx = col * GLCD_ROWS + row;
                 GlcdWriteData(glcdImageBuffer[idx], GLCD_DI_DATA_MODE);
                 Delay_us(speed);
             }
         }
     }
 }
+

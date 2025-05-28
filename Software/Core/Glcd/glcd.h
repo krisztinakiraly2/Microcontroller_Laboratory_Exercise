@@ -13,7 +13,6 @@
 #include "main.h"
 #include "string.h"
 #include "glcd_defines.h"
-#include "glcd_buffers.h"
 #include "glcd_draw_functions.h"
 #include "glcd_fill_functions.h"
 #include "mytasks.h"
